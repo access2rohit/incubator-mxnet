@@ -282,6 +282,19 @@ def test_diag():
     assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
 
 
+def test_softmax_with_large_inputs():
+    def softmax_forward(input_data, true_output):
+        data = mx.sym.Variable('data')
+        out1 = data.softmax(axis=0)
+        exec1 = out1.bind(mx.cpu(), args={'data': input_data})
+        exec1.forward()[0].wait_to_read()
+        ndarr = exec1.outputs[0]
+        nparr = ndarr.asnumpy()
+        assert_almost_equal(nparr, true_output, rtol=1e-5, atol=1e-5)
+
+    softmax_forward(mx.nd.ones((128, LARGE_X)), np.full((128, LARGE_X), 0.0078125))
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
