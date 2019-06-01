@@ -493,6 +493,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     atol = get_atol(atol)
     if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
         return
+    print("there are differences")
     index, rel = find_max_violation(a, b, rtol, atol)
     np.set_printoptions(threshold=4, suppress=True)
     msg = npt.build_err_msg([a, b],
@@ -811,17 +812,22 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
     assert dtype in (np.float16, np.float32, np.float64)
     approx_grads = {k: np.zeros(v.shape, dtype=dtype)
                     for k, v in location.items()}
+    print("here 1")
     for k, v in location.items():
         stype = executor.arg_dict[k].stype
         if stype == 'default':
             executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
+    print("here 2")
     for k in location:
         location[k] = np.asarray(location[k], order='C')
+    print("here 3")
+    print("location.items()={}".format(location.items()))
     for k, v in location.items():
         if v.dtype.kind != 'f':
             continue
         stype = executor.arg_dict[k].stype
         old_value = v.copy()
+        print("v.shape()={}".format(v.shape))
         for i in range(np.prod(v.shape)):
             # inplace update
             v.ravel()[i] += eps/2.0
@@ -931,6 +937,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     else:
         raise ValueError
 
+    print("inside numeric gradient")
     input_shape = {k: v.shape for k, v in location.items()}
     _, out_shape, _ = sym.infer_shape(**input_shape)
     proj = mx.sym.Variable("__random_proj")
@@ -953,7 +960,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
                 # if the symbolic grad is expected to be zero, it should not be initialized at all
                 args_grad[k] = mx.nd.zeros(args_grad[k].shape, args_grad[k].context,
                                            args_grad[k].dtype, v)
-
+    print("calling bind")
     executor = out.bind(ctx, grad_req=grad_req,
                         args=location, args_grad=args_grad, aux_states=aux_states)
 
@@ -963,13 +970,18 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
                          "Got %d inputs and %d locations"%(len(inps), len(location)))
     assert len(executor.outputs) == 1
 
+    print("calling forward")
     executor.forward(is_train=True)
+    print("calling backward")
     executor.backward()
+    print("called backwards")
     symbolic_grads = {k:executor.grad_dict[k].asnumpy() for k in grad_nodes}
 
+    print("calling numeric gradients")
     numeric_gradients = numeric_grad(
         executor, location_npy, aux_states_npy,
         eps=numeric_eps, use_forward_train=use_forward_train, dtype=dtype)
+    print("called numeric grads")
 
     for name in grad_nodes:
         fd_grad = numeric_gradients[name]

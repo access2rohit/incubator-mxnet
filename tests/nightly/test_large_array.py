@@ -17,9 +17,13 @@
 
 import mxnet as mx
 import numpy as np
-from mxnet.test_utils import rand_ndarray, assert_almost_equal
+import sys
+import os
+sys.path.append(os.path.abspath('tests/python/unittest'))
+print(sys.path)
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, check_numeric_gradient
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed
+from common import with_seed
 
 # dimension constants
 MEDIUM_X = 10000
@@ -282,6 +286,47 @@ def test_diag():
     assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
 
 
+def check_pad_with_shape(shape, xpu, pad_width, mode, dtype="float64"):
+    # bind with label
+    X = mx.symbol.Variable('X', dtype=dtype)
+    Y = mx.symbol.Pad(data=X, mode=mode, pad_width=pad_width)
+    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu(), dtype=dtype).copyto(xpu)
+    # numpy result
+    pad_grouped = list(zip(*[iter(list(pad_width))] * 2))
+    print("calling pad")
+    np_out = np.pad(x.asnumpy(), pad_grouped, mode)
+    print("pad called")
+    # mxnet result
+    grad = mx.nd.empty(shape, ctx = xpu, dtype=dtype)
+    exec1 = Y.bind(xpu, args = [x], args_grad = {'X': grad})
+    exec1.forward(is_train=True)
+    print("forward called")
+    out = exec1.outputs[0].asnumpy()
+    # compare numpy + mxnet
+    print("calling assert")
+    assert_almost_equal(out, np_out)
+    # grad check
+    print("calling check numeric gradient")
+    check_numeric_gradient(Y, [x.asnumpy()], numeric_eps=1e-2, rtol=1e-2)
+
+def test_pad():
+    ctx=mx.cpu()
+    shape1 = (LARGE_X, 2, 2, 2)
+    pad1 = (0, 0, 0, 0, 1, 1, 1, 1)
+#     shape2 = (LARGE_X, 4, 4, 2, 2)
+#     pad2 = (0, 0, 0, 0, 1, 2, 3, 4, 3, 1)
+    # note: this op doesn't support ints yet. Add tests when supported
+#     dtypes = ["float16", "float32", "float64"]
+    dtypes = ["float16"]
+    for dtype in dtypes:
+        print("here")
+        check_pad_with_shape(shape1, ctx, pad1, 'constant', dtype)
+#         check_pad_with_shape(shape1, ctx, pad1, 'edge', dtype)
+#         check_pad_with_shape(shape2, ctx, pad2, 'constant', dtype)
+#         check_pad_with_shape(shape2, ctx, pad2, 'edge', dtype)
+#         check_pad_with_shape(shape1, ctx, pad1, 'reflect', dtype)
+#         check_pad_with_shape(shape2, ctx, pad2, 'reflect', dtype)
+
 def test_softmax_with_large_inputs():
     def softmax_forward(input_data, true_output):
         data = mx.sym.Variable('data')
@@ -296,5 +341,7 @@ def test_softmax_with_large_inputs():
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+#     test_softmax_with_large_inputs()
+    test_pad()
+#     import nose
+#     nose.runmodule()

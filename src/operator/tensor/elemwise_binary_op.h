@@ -139,21 +139,25 @@ class ElemwiseBinaryOp : public OpBase {
                              const std::vector<TBlob> &inputs,
                              const std::vector<OpReqType> &req,
                              const std::vector<TBlob> &outputs) {
+    printf("Input output size check");
     DCHECK_EQ(outputs.size(), 2U);
     DCHECK_EQ(inputs.size(), 3U);
     mxnet_op::Stream<xpu> *s = ctx.get_stream<xpu>();
     const DType *ograd_dptr = inputs[0].dptr<DType>();
     const DType *lhs_dptr = inputs[1].dptr<DType>();
     const DType *rhs_dptr = inputs[2].dptr<DType>();
+    printf("pointers initialized");
+    printf("func 1");
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-      const int size = static_cast<int>(
+      const int64_t size = static_cast<int64_t>(
         (outputs[0].Size() + mxnet_op::DataType<DType>::kLanes - 1)
         / mxnet_op::DataType<DType>::kLanes);
       DType * lgrad_dptr = outputs[0].dptr<DType>();
       mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<LOP>, Req>, xpu>::Launch(
         s, size, lgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);});
+    printf("func 2");
     MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
-      const int size = static_cast<int>(
+      const int64_t size = static_cast<int64_t>(
         (outputs[1].Size() + mxnet_op::DataType<DType>::kLanes - 1)
         / mxnet_op::DataType<DType>::kLanes);
       DType * rgrad_dptr = outputs[1].dptr<DType>();
