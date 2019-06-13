@@ -249,6 +249,34 @@ inline int get_num_threads<cpu>(const int N) {
     LOG(FATAL) << "Unknown type enum " << type;            \
   }
 
+#define MXNET_IGNORE_FLOAT16_INT8_TYPE_SWITCH(type, DType, ...)  \
+switch (type) {                                                  \
+case mshadow::kFloat64:                                          \
+case mshadow::kFloat16:                                          \
+case mshadow::kFloat32:                                          \
+  {                                                              \
+    typedef float DType;                                         \
+    {__VA_ARGS__}                                                \
+  }                                                              \
+  break;                                                         \
+case mshadow::kUint8:                                            \
+case mshadow::kInt8:                                             \
+case mshadow::kInt32:                                            \
+  {                                                              \
+    typedef int32_t DType;                                       \
+    {__VA_ARGS__}                                                \
+  }                                                              \
+  break;                                                         \
+case mshadow::kInt64:                                            \
+  {                                                              \
+    typedef int64_t DType;                                       \
+    {__VA_ARGS__}                                                \
+  }                                                              \
+  break;                                                         \
+default:                                                         \
+  LOG(FATAL) << "Unknown type enum " << type;                    \
+}
+
 #define MXNET_REAL_ACC_TYPE_SWITCH(type, DType, AType, ...)\
   switch (type) {                                          \
   case mshadow::kFloat32:                                  \

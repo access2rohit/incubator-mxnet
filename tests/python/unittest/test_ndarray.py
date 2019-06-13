@@ -29,6 +29,7 @@ from mxnet.test_utils import default_context
 from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
 from mxnet.test_utils import random_sample, rand_shape_nd
+from mxnet import runtime
 from numpy.testing import assert_allclose
 import mxnet.autograd
 
@@ -747,6 +748,7 @@ def test_linspace():
 def test_order():
     ctx = default_context()
     dat_size = 5
+    is_large_tensor_enabled = runtime.Features().is_enabled('INT64_TENSOR_SIZE')
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
         if ret_typ == "indices":
             if is_ascend:
@@ -819,7 +821,11 @@ def test_order():
 
         # test for ret_typ=indices
         nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="indices", k=3, is_ascend=True).asnumpy()
-        assert nd_ret_topk.dtype == np.float32  # Test the default dtype
+        # Test the default dtype
+        if is_large_tensor_enabled:
+            assert nd_ret_topk.dtype == np.int64
+        else:
+            assert nd_ret_topk.dtype == np.int32
         gt = gt_topk(a_npy, axis=1, ret_typ="indices", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk, gt)
         nd_ret_topk = mx.nd.topk(a_nd, axis=3, ret_typ="indices", k=2, is_ascend=False, dtype=np.float64).asnumpy()
@@ -860,7 +866,10 @@ def test_order():
         nd_ret_topk_val = nd_ret_topk_val.asnumpy()
         nd_ret_topk_ind = nd_ret_topk_ind.asnumpy()
         assert nd_ret_topk_val.dtype == dtype
-        assert nd_ret_topk_ind.dtype == np.float32
+        if is_large_tensor_enabled:
+            assert nd_ret_topk_ind.dtype == np.int64
+        else:
+            assert nd_ret_topk_ind.dtype == np.int32
         gt_val = gt_topk(a_npy, axis=1, ret_typ="value", k=3, is_ascend=True)
         gt_ind = gt_topk(a_npy, axis=1, ret_typ="indices", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk_val, gt_val)
@@ -886,6 +895,8 @@ def test_order():
 
         # test for argsort
         for idtype in [np.int32, np.float16, np.float32, np.float64]:
+            if idtype == np.float16:
+                idtype = np.float32
             nd_ret_argsort = mx.nd.argsort(a_nd, axis=3, is_ascend=True, dtype=idtype).asnumpy()
             assert nd_ret_argsort.dtype == idtype
             gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=dat_size, is_ascend=True)
