@@ -55,7 +55,8 @@ extern "C" {
 #endif
 
 /*! \brief manually define unsigned int */
-typedef unsigned int mx_uint;
+typedef int64_t mx_int64;
+typedef uint32_t mx_uint;
 /*! \brief manually define float */
 typedef float mx_float;
 /*! \brief data type to store dim size */
@@ -556,6 +557,13 @@ MXNET_DLL int MXNDArrayCreateEx(const mx_uint *shape,
                               int dtype,
                               NDArrayHandle *out);
 
+MXNET_DLL int MXNDArrayCreateExInt64(const mx_int64 *shape,
+                              mx_uint ndim,
+                              int dev_type,
+                              int dev_id,
+                              int delay_alloc,
+                              int dtype,
+                              NDArrayHandle *out);
 
 /*!
  * \brief create an empty sparse NDArray with specified shape and data type
@@ -577,6 +585,19 @@ MXNET_DLL int MXNDArrayCreateEx(const mx_uint *shape,
 MXNET_DLL int MXNDArrayCreateSparseEx(int storage_type,
                                       const mx_uint *shape,
                                       mx_uint ndim,
+                                      int dev_type,
+                                      int dev_id,
+                                      int delay_alloc,
+                                      int dtype,
+                                      mx_uint num_aux,
+                                      int *aux_type,
+                                      mx_uint *aux_ndims,
+                                      const mx_uint *aux_shape,
+                                      NDArrayHandle *out);
+
+MXNET_DLL int MXNDArrayCreateSparseExInt64(int storage_type,
+                                      const mx_int64 *shape,
+                                      mx_int64 ndim,
                                       int dev_type,
                                       int dev_id,
                                       int delay_alloc,
@@ -634,6 +655,12 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
                             mx_uint *out_name_size,
                             const char*** out_names);
 
+MXNET_DLL int MXNDArrayLoadInt64(const char* fname,
+                            mx_int64 *out_size,
+                            NDArrayHandle** out_arr,
+                            mx_int64 *out_name_size,
+                            const char*** out_names);
+
 /*!
  * \brief Load list / dictionary of narrays from file content loaded into memory.
  * This will load a list of ndarrays in a similar
@@ -653,6 +680,13 @@ MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
                             mx_uint *out_size,
                             NDArrayHandle** out_arr,
                             mx_uint *out_name_size,
+                            const char*** out_names);
+
+MXNET_DLL int MXNDArrayLoadFromBufferInt64(const void *ndarray_buffer,
+                            size_t size,
+                            mx_int64 *out_size,
+                            NDArrayHandle** out_arr,
+                            mx_int64 *out_name_size,
                             const char*** out_names);
 
 /*!
@@ -793,6 +827,11 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
                                 mx_uint *out_dim,
                                 const mx_uint **out_pdata);
+
+MXNET_DLL int MXNDArrayGetShapeInt64(NDArrayHandle handle,
+                                mx_int64 *out_dim,
+                                const mx_int64 **out_pdata);
+
 /*!
  * \brief get the shape of the array
  * \param handle the handle to the narray
@@ -803,6 +842,11 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayGetShapeEx(NDArrayHandle handle,
                                   int *out_dim,
                                   const int **out_pdata);
+
+MXNET_DLL int MXNDArrayGetShapeExInt64(NDArrayHandle handle,
+                                       int *out_dim,
+                                       const int64_t **out_pdata);
+
 /*!
  * \brief get the content of the data in NDArray
  * \param handle the handle to the ndarray
@@ -886,6 +930,10 @@ MXNET_DLL int MXNDArrayGetAuxType(NDArrayHandle handle,
                                   mx_uint i,
                                   int *out_type);
 
+MXNET_DLL int MXNDArrayGetAuxTypeInt64(NDArrayHandle handle,
+                                  mx_int64 i,
+                                  int *out_type);
+
 /*!
  * \brief Get a deep copy of the ith aux data blob
  * in the form of an NDArray of default storage type.
@@ -893,6 +941,10 @@ MXNET_DLL int MXNDArrayGetAuxType(NDArrayHandle handle,
  */
 MXNET_DLL int MXNDArrayGetAuxNDArray(NDArrayHandle handle,
                                      mx_uint i,
+                                     NDArrayHandle *out);
+
+MXNET_DLL int MXNDArrayGetAuxNDArrayInt64(NDArrayHandle handle,
+                                     mx_int64 i,
                                      NDArrayHandle *out);
 
 /*!
@@ -950,6 +1002,10 @@ MXNET_DLL int MXNDArrayGetGradState(NDArrayHandle handle, int *out);
  */
 MXNET_DLL int MXListFunctions(mx_uint *out_size,
                               FunctionHandle **out_array);
+
+MXNET_DLL int MXListFunctionsInt64(mx_int64 *out_size,
+                              FunctionHandle **out_array);
+
 /*!
  * \brief get the function handle by name
  * \param name the name of the function
@@ -1217,6 +1273,10 @@ MXNET_DLL int MXInvokeCachedOpEx(CachedOpHandle handle,
  */
 MXNET_DLL int MXListAllOpNames(mx_uint *out_size,
                                const char ***out_array);
+
+MXNET_DLL int MXListAllOpNamesInt64(mx_int64 *out_size,
+                               const char ***out_array);
+
 /*!
  * \brief list all the available AtomicSymbolEntry
  * \param out_size the size of returned array
@@ -1224,6 +1284,9 @@ MXNET_DLL int MXListAllOpNames(mx_uint *out_size,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
+                                               AtomicSymbolCreator **out_array);
+
+MXNET_DLL int MXSymbolListAtomicSymbolCreatorsInt64(mx_int64 *out_size,
                                                AtomicSymbolCreator **out_array);
 
 /*!
@@ -1438,6 +1501,11 @@ MXNET_DLL int MXSymbolListAttrShallow(SymbolHandle symbol,
 MXNET_DLL int MXSymbolListArguments(SymbolHandle symbol,
                                     mx_uint *out_size,
                                     const char ***out_str_array);
+
+MXNET_DLL int MXSymbolListArgumentsInt64(SymbolHandle symbol,
+                                         mx_int64 *out_size,
+                                         const char ***out_str_array);
+
 /*!
  * \brief List returns in the symbol.
  * \param symbol the symbol
@@ -1449,6 +1517,10 @@ MXNET_DLL int MXSymbolListOutputs(SymbolHandle symbol,
                                   mx_uint *out_size,
                                   const char ***out_str_array);
 
+MXNET_DLL int MXSymbolListOutputsInt64(SymbolHandle symbol,
+                                       mx_int64 *out_size,
+                                       const char ***out_str_array);
+
 /*!
  * \brief Get number of outputs of the symbol.
  * \param symbol The symbol
@@ -1456,7 +1528,7 @@ MXNET_DLL int MXSymbolListOutputs(SymbolHandle symbol,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolGetNumOutputs(SymbolHandle symbol,
-                                     mx_uint *output_count);
+                                    mx_uint *output_count);
 
 /*!
  * \brief Get a symbol that contains all the internals.
@@ -1495,6 +1567,11 @@ MXNET_DLL int MXSymbolGetOutput(SymbolHandle symbol,
 MXNET_DLL int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
                                           mx_uint *out_size,
                                           const char ***out_str_array);
+
+MXNET_DLL int MXSymbolListAuxiliaryStatesInt64(SymbolHandle symbol,
+                                          mx_int64 *out_size,
+                                          const char ***out_str_array);
+
 /*!
  * \brief Compose the symbol on other symbols.
  *
@@ -1566,6 +1643,22 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
                                  const mx_uint ***aux_shape_data,
                                  int *complete);
 
+MXNET_DLL int MXSymbolInferShapeInt64(SymbolHandle sym,
+                                 mx_uint num_args,
+                                 const char** keys,
+                                 const mx_int64 *arg_ind_ptr,
+                                 const mx_int64 *arg_shape_data,
+                                 mx_int64 *in_shape_size,
+                                 const mx_int64 **in_shape_ndim,
+                                 const mx_int64 ***in_shape_data,
+                                 mx_int64 *out_shape_size,
+                                 const mx_int64 **out_shape_ndim,
+                                 const mx_int64 ***out_shape_data,
+                                 mx_int64 *aux_shape_size,
+                                 const mx_int64 **aux_shape_ndim,
+                                 const mx_int64 ***aux_shape_data,
+                                 int *complete);
+
 /*!
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
@@ -1603,6 +1696,23 @@ MXNET_DLL int MXSymbolInferShapeEx(SymbolHandle sym,
                                    const int **aux_shape_ndim,
                                    const int ***aux_shape_data,
                                    int *complete);
+
+MXNET_DLL int MXSymbolInferShapeExInt64(SymbolHandle sym,
+                                   mx_uint num_args,
+                                   const char** keys,
+                                   const mx_uint *arg_ind_ptr,
+                                   const int *arg_shape_data,
+                                   mx_uint *in_shape_size,
+                                   const int **in_shape_ndim,
+                                   const int64_t ***in_shape_data,
+                                   mx_uint *out_shape_size,
+                                   const int **out_shape_ndim,
+                                   const int64_t ***out_shape_data,
+                                   mx_uint *aux_shape_size,
+                                   const int **aux_shape_ndim,
+                                   const int64_t ***aux_shape_data,
+                                   int *complete);
+
 /*!
  * \brief DEPRECATED. Use MXSymbolInferShapePartialEx instead.
  * partially infer shape of unknown input shapes given the known one.
@@ -1644,6 +1754,21 @@ MXNET_DLL int MXSymbolInferShapePartial(SymbolHandle sym,
                                         const mx_uint ***aux_shape_data,
                                         int *complete);
 
+MXNET_DLL int MXSymbolInferShapePartialInt64(SymbolHandle sym,
+                                             mx_uint num_args,
+                                             const char** keys,
+                                             const mx_int64 *arg_ind_ptr,
+                                             const mx_int64 *arg_shape_data,
+                                             mx_int64 *in_shape_size,
+                                             const mx_int64 **in_shape_ndim,
+                                             const mx_int64 ***in_shape_data,
+                                             mx_int64 *out_shape_size,
+                                             const mx_int64 **out_shape_ndim,
+                                             const mx_int64 ***out_shape_data,
+                                             mx_int64 *aux_shape_size,
+                                             const mx_int64 **aux_shape_ndim,
+                                             const mx_int64 ***aux_shape_data,
+                                             int *complete);
 
 /*!
  * \brief partially infer shape of unknown input shapes given the known one.
@@ -1684,6 +1809,22 @@ MXNET_DLL int MXSymbolInferShapePartialEx(SymbolHandle sym,
                                           const int **aux_shape_ndim,
                                           const int ***aux_shape_data,
                                           int *complete);
+
+MXNET_DLL int MXSymbolInferShapePartialExInt64(SymbolHandle sym,
+                                               mx_uint num_args,
+                                               const char** keys,
+                                               const mx_int64 *arg_ind_ptr,
+                                               const int *arg_shape_data,
+                                               mx_int64 *in_shape_size,
+                                               const int **in_shape_ndim,
+                                               const int ***in_shape_data,
+                                               mx_int64 *out_shape_size,
+                                               const int **out_shape_ndim,
+                                               const int ***out_shape_data,
+                                               mx_int64 *aux_shape_size,
+                                               const int **aux_shape_ndim,
+                                               const int ***aux_shape_data,
+                                               int *complete);
 
 /*!
  * \brief infer type of unknown input types given the known one.

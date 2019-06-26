@@ -35,7 +35,7 @@ from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
-from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle, mx_int
+from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle, mx_int, mx_int64
 from ..base import ctypes2buffer
 from ..context import Context, current_context
 from . import _internal
@@ -130,10 +130,12 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     handle
         A new empty `NDArray` handle.
     """
+    print("shape={}".format(shape))
     hdl = NDArrayHandle()
-    check_call(_LIB.MXNDArrayCreateEx(
-        c_array_buf(mx_uint, native_array('I', shape)),
-        mx_uint(len(shape)),
+#     check_call(_LIB.MXNDArrayCreateEx(
+    check_call(_LIB.MXNDArrayCreateExInt64(
+        c_array_buf(mx_int64, native_array('q', shape)),
+        mx_int64(len(shape)),
         ctypes.c_int(ctx.device_typeid),
         ctypes.c_int(ctx.device_id),
         ctypes.c_int(int(delay_alloc)),
@@ -695,7 +697,6 @@ fixed-size items.
                 raise IndexError('index %d is out of bounds for axis 0 with size %d'
                                  % (key, shape[0]))
             key = py_slice(key, key+1)  # key must be >= 0 here
-
         if isinstance(key, py_slice):
             assign_to_self = key.step is None or key.step == 1
             assign_to_self &= key.start is None or key.start == 0
@@ -711,6 +712,7 @@ fixed-size items.
                                     dtype=self.dtype, value=float(value), out=self)
                 elif isinstance(value, (np.ndarray, np.generic)):
                     if isinstance(value, np.generic) or value.shape != shape:
+                        print("shape={}, value.shape={}".format(shape, value.shape))
                         value = np.broadcast_to(value, shape)
                     self._sync_copyfrom(value)
                 else:  # value might be a list or a tuple
@@ -1847,8 +1849,8 @@ fixed-size items.
         (2L, 3L, 4L)
         """
         ndim = mx_int()
-        pdata = ctypes.POINTER(mx_int)()
-        check_call(_LIB.MXNDArrayGetShapeEx(
+        pdata = ctypes.POINTER(mx_int64)()
+        check_call(_LIB.MXNDArrayGetShapeExInt64(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         if ndim.value == -1:
             return None

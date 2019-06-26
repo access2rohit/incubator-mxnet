@@ -1180,18 +1180,18 @@ class Symbol(SymbolBase):
             keys = c_str_array(str_keys)
         arg_shape_size = mx_uint()
         arg_shape_ndim = ctypes.POINTER(mx_int)()
-        arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
+        arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
         out_shape_size = mx_uint()
         out_shape_ndim = ctypes.POINTER(mx_int)()
-        out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
+        out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
         aux_shape_size = mx_uint()
         aux_shape_ndim = ctypes.POINTER(mx_int)()
-        aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
+        aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
         complete = ctypes.c_int()
         if partial:
-            infer_func = _LIB.MXSymbolInferShapePartialEx
+            infer_func = _LIB.MXSymbolInferShapePartialExInt64
         else:
-            infer_func = _LIB.MXSymbolInferShapeEx
+            infer_func = _LIB.MXSymbolInferShapeExInt64
         check_call(infer_func(
             self.handle,
             mx_uint(len(indptr) - 1),

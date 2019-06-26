@@ -19,13 +19,13 @@ import numpy as np
 import mxnet as mx
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed
+#from tests.python.unittest.common import with_seed
 
 # dimension constants
 MEDIUM_X = 10000
-LARGE_X = 100000000
+LARGE_X = 5000000000
 LARGE_Y = 50000000
-SMALL_Y = 50
+SMALL_Y = 1
 LARGE_SIZE = LARGE_X * SMALL_Y
 
 
@@ -61,13 +61,13 @@ def test_ndarray_convert():
     assert isinstance(b, mx.nd.sparse.RowSparseNDArray)
 
 
-@with_seed()
+#@with_seed()
 def test_ndarray_random_uniform():
     a = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
     assert a[-1][0] != 0
 
 
-@with_seed()
+#@with_seed()
 def test_ndarray_random_randint():
     a = nd.random.randint(100, 10000, shape=(LARGE_X, SMALL_Y))
     assert a.shape == (LARGE_X, SMALL_Y)
@@ -157,8 +157,8 @@ def test_take():
 
 
 def test_slice():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y))
-    res = nd.slice(a, begin=(LARGE_X-1000, 1), end=(LARGE_X, SMALL_Y))
+    a = nd.ones(shape=(SMALL_Y, LARGE_X))
+    res = nd.slice(a, begin=(SMALL_Y-1, LARGE_X-100000000), end=(SMALL_Y, LARGE_X))
     assert np.sum(res[-1].asnumpy() == 1) == res.shape[1]
 
 
@@ -196,7 +196,7 @@ def test_Dense(ctx=mx.cpu(0)):
     res.wait_to_read()
     assert res.shape == (50000000, 100)
 
-
+'''
 def test_where():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.arange(0, LARGE_X * SMALL_Y).reshape(LARGE_X, SMALL_Y)
@@ -205,7 +205,7 @@ def test_where():
     csr_cond = nd.sparse.cast_storage(b < 10, 'csr')
     res = nd.sparse.where(csr_cond, a, b)
     assert np.sum(res[0].asnumpy() == 1) == 10
-
+'''
 
 def test_pick():
     a = mx.nd.ones(shape=(256 * 35, 1024 * 1024))
@@ -245,7 +245,7 @@ def test_spacetodepth():
     output = mx.nd.space_to_depth(data, 2)
     assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
-@with_seed()
+#@with_seed()
 def test_diag():
     a_np = np.random.random((LARGE_X, SMALL_Y)).astype(np.float32)
     a = mx.nd.array(a_np)
@@ -270,7 +270,7 @@ def test_diag():
     assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
 
 
-@with_seed()
+#@with_seed()
 def test_ravel_multi_index():
     x1, y1 = rand_coord_2d((LARGE_X - 100), LARGE_X, 10, SMALL_Y)
     x2, y2 = rand_coord_2d((LARGE_X - 200), LARGE_X, 9, SMALL_Y)
@@ -281,7 +281,7 @@ def test_ravel_multi_index():
     assert np.sum(1 for i in range(idx.size) if idx[i] == idx_numpy[i]) == 3
 
 
-@with_seed()
+#@with_seed()
 def test_unravel_index():
     x1, y1 = rand_coord_2d((LARGE_X - 100), LARGE_X, 10, SMALL_Y)
     x2, y2 = rand_coord_2d((LARGE_X - 200), LARGE_X, 9, SMALL_Y)
@@ -293,9 +293,9 @@ def test_unravel_index():
 
 
 def create_2d_tensor(rows, columns):
-    a = np.arange(0, rows).reshape(rows, 1)
-    b = np.broadcast_to(a, shape=(a.shape[0], columns))
-    return nd.array(b, dtype=np.int64)
+    a = np.arange(0, columns).reshape(1, columns)
+    #b = np.broadcast_to(a, shape=(rows, columns))
+    return nd.array(a, dtype=np.int64)
 
 
 def test_transpose():
@@ -313,9 +313,9 @@ def test_swapaxes():
 
 
 def test_flip():
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
+    b = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
     t = nd.flip(b, axis=0)
-    assert t.shape == (LARGE_X, SMALL_Y)
+    assert t.shape == (LARGE_X * SMALL_Y, SMALL_Y)
     assert np.sum(t[-1, :].asnumpy() == 0) == b.shape[1]
 
 
@@ -354,4 +354,6 @@ def test_topk():
 
 if __name__ == '__main__':
     import nose
-    nose.runmodule()
+    #nose.runmodule()
+    #test_slice()
+    test_flip()

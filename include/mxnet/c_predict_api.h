@@ -42,7 +42,8 @@ extern "C" {
 #endif
 
 /*! \brief manually define unsigned int */
-typedef unsigned int mx_uint;
+typedef int64_t mx_int64;
+typedef uint32_t mx_uint;
 /*! \brief manually define float */
 typedef float mx_float;
 /*! \brief handle to Predictor */
