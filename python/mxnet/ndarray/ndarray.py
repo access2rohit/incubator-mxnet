@@ -1235,9 +1235,13 @@ fixed-size items.
             if idx < 0:
                 raise IndexError('index %d is out of bounds for axis 0 with size %d'
                                  % (idx-length, length))
-        check_call(_LIB.MXNDArrayAt(
-            self.handle, mx_uint(idx), ctypes.byref(handle)))
-        return self.__class__(handle=handle, writable=self.writable)
+        if sys.version_info[0] > 2 and Features().is_enabled('INT64_TENSOR_SIZE'):
+            check_call(_LIB.MXNDArrayAtInt64(
+                self.handle, mx_int64(idx), ctypes.byref(handle)))
+        else:
+            check_call(_LIB.MXNDArrayAt(
+                self.handle, mx_uint(idx), ctypes.byref(handle)))
+        return NDArray(handle=handle, writable=self.writable)
 
     def reshape(self, *shape, **kwargs):
         """Returns a **view** of this array with a new shape without altering any data.

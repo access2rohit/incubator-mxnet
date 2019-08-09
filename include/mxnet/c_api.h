@@ -801,6 +801,10 @@ MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
                           mx_uint idx,
                           NDArrayHandle *out);
 
+MXNET_DLL int MXNDArrayAtInt64(NDArrayHandle handle,
+                               mx_int64 idx,
+                               NDArrayHandle *out);
+
 /*!
  * \brief get the storage type of the array
  */
