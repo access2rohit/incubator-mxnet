@@ -2,4 +2,4 @@
 set -e
 cd $HOME
 cp $HOME/incubator-mxnet/wheel.sh .
-bash wheel.sh
+source wheel.sh

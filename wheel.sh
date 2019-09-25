@@ -33,16 +33,54 @@ sudo make install
 pip install -U pip "setuptools==36.2.0" wheel --user
 pip install pypandoc numpy==1.15.0 --user
 
-export mxnet_variant=mkl
 
-git clone --recursive https://github.com/apache/incubator-mxnet.git
-cd incubator-mxnet
-
-bash tools/staticbuild/build.sh
+#export mxnet_variant=mkl
+# CPU Build
+mkdir $HOME/cpu
+cd $HOME/cpu
+git clone --recursive https://github.com/access2rohit/incubator-mxnet.git
+cd $HOME/cpu/incubator-mxnet
+git checkout lts_master
+echo "USE_INT64_TENSOR_SIZE = 1" >> $HOME/cpu/incubator-mxnet/make/pip/pip_linux_cpu.mk
 
 mv python/setup.py python/setup.py.bak
 cp tools/pip/setup.py python/
 cp tools/pip/MANIFEST.in python/
 cp -r tools/pip/doc python/
 
-bash tools/staticbuild/build_wheel.sh
+source tools/staticbuild/build.sh cpu pip
+source tools/staticbuild/build_wheel.sh
+
+
+# cu100 Build
+mkdir $HOME/cu100
+cd $HOME/cu100
+git clone --recursive https://github.com/access2rohit/incubator-mxnet.git
+cd $HOME/cu100/incubator-mxnet
+git checkout lts_master
+echo "USE_INT64_TENSOR_SIZE = 1" >> $HOME/cu100/incubator-mxnet/make/pip/pip_linux_cu100.mk
+
+mv python/setup.py python/setup.py.bak
+cp tools/pip/setup.py python/
+cp tools/pip/MANIFEST.in python/
+cp -r tools/pip/doc python/
+
+source tools/staticbuild/build.sh cu100 pip
+source tools/staticbuild/build_wheel.sh
+
+
+# cu101 Build
+mkdir $HOME/cu101
+cd $HOME/cu101
+git clone --recursive https://github.com/access2rohit/incubator-mxnet.git
+cd $HOME/cu101/incubator-mxnet
+git checkout lts_master
+echo "USE_INT64_TENSOR_SIZE = 1" >> $HOME/cu101/incubator-mxnet/make/pip/pip_linux_cu101.mk
+
+mv python/setup.py python/setup.py.bak
+cp tools/pip/setup.py python/
+cp tools/pip/MANIFEST.in python/
+cp -r tools/pip/doc python/
+
+source tools/staticbuild/build.sh cu101 pip
+source tools/staticbuild/build_wheel.sh
