@@ -1064,7 +1064,8 @@ struct broadcast_kernel {
     index_t idx = i;
     index_t in_idx = i;
     for (int iter = ndim - 1; iter >= 0; --iter) {
-      size_t dim_idx = idx % out_shape[iter];
+//      size_t dim_idx = idx % out_shape[iter];
+      size_t dim_idx = idx - (idx / out_shape[iter]) * out_shape[iter];
       in_idx -= dim_idx * out_stride;
       if (in_shape[iter] != 1) {
         in_idx += dim_idx * in_stride;
