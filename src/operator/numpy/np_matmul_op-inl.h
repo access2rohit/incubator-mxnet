@@ -157,12 +157,27 @@ inline void MatmulImpl(const OpContext& ctx,
     DType* bc_b_ptr = bc_a_ptr + bc_size_a;
     MSHADOW_TYPE_SWITCH_WITH_BOOL(input_a.type_flag_, IType, {
       MSHADOW_TYPE_SWITCH_WITH_BOOL(input_b.type_flag_, OType, {
+        uint64_t axes[ndim-2], out_stride[ndim-2];
+        int iter = ndim - 3, i = 0;
+        out_stride[iter] = 1;
+        if (k_a_shape[iter] != k_a_shape_bc[iter]) {
+          axes[i] = iter;
+          i++;
+        }
+        --iter;
+        for (; iter >= 0; --iter) {
+          out_stride[iter] = out_stride[iter-1] * k_a_shape_bc[iter+1];
+          if (k_a_shape[iter] != k_a_shape_bc[iter]) {
+            axes[i] = iter;
+            i++;
+          }
+        }
         Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
           s, bc_size_a, input_a.dptr<IType>(), bc_a_ptr,
-          k_a_shape, k_a_shape_bc, OpReqType::kWriteTo, ndim);
+          k_a_shape, k_a_shape_bc, OpReqType::kWriteTo, ndim, axes, out_stride, i);
         Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
           s, bc_size_b, input_b.dptr<IType>(), bc_b_ptr,
-          k_b_shape, k_b_shape_bc, OpReqType::kWriteTo, ndim);
+          k_b_shape, k_b_shape_bc, OpReqType::kWriteTo, ndim, axes, out_stride, i);
       });
     });
     ans = mshadow::Tensor<xpu, 3, DType>(output.dptr<DType>(),
