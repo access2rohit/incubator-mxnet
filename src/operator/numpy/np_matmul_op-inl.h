@@ -157,27 +157,50 @@ inline void MatmulImpl(const OpContext& ctx,
     DType* bc_b_ptr = bc_a_ptr + bc_size_a;
     MSHADOW_TYPE_SWITCH_WITH_BOOL(input_a.type_flag_, IType, {
       MSHADOW_TYPE_SWITCH_WITH_BOOL(input_b.type_flag_, OType, {
-        uint64_t axes[ndim-2], out_stride[ndim-2];
-        int iter = ndim - 3, i = 0;
+        bool a_shape_changed = false, b_shape_changed = false;
+        size_t axes[ndim-2], out_stride[ndim-2], axes_b[ndim-2], out_stride_b[ndim-2];
+        int iter = ndim - 3, idx_a = 0, idx_b = 0;
         out_stride[iter] = 1;
+        out_stride_b[iter] = 1;
         if (k_a_shape[iter] != k_a_shape_bc[iter]) {
-          axes[i] = iter;
-          i++;
+          axes[idx_a] = iter;
+          a_shape_changed = true;
+          idx_a++;
+        }
+        if (k_b_shape[iter] != k_b_shape_bc[iter]) {
+          axes_b[idx_b] = iter;
+          b_shape_changed = true;
+          idx_b++;
         }
         --iter;
         for (; iter >= 0; --iter) {
-          out_stride[iter] = out_stride[iter-1] * k_a_shape_bc[iter+1];
+          out_stride[iter] = out_stride[iter+1] * k_a_shape_bc[iter+1];
+          out_stride_b[iter] = out_stride_b[iter+1] * k_b_shape_bc[iter+1];
           if (k_a_shape[iter] != k_a_shape_bc[iter]) {
-            axes[i] = iter;
-            i++;
+            axes[idx_a] = iter;
+            a_shape_changed = true;
+            idx_a++;
+          }
+          if (k_b_shape[iter] != k_b_shape_bc[iter]) {
+            axes_b[idx_b] = iter;
+            b_shape_changed = true;
+            idx_b++;
           }
         }
-        Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-          s, bc_size_a, input_a.dptr<IType>(), bc_a_ptr,
-          k_a_shape, k_a_shape_bc, OpReqType::kWriteTo, ndim, axes, out_stride, i);
-        Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-          s, bc_size_b, input_b.dptr<IType>(), bc_b_ptr,
-          k_b_shape, k_b_shape_bc, OpReqType::kWriteTo, ndim, axes, out_stride, i);
+        if(a_shape_changed){
+          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
+            s, bc_size_a, input_a.dptr<IType>(), bc_a_ptr,
+            k_a_shape, k_a_shape_bc, OpReqType::kWriteTo, ndim, axes, out_stride, idx_a);
+        } else {
+          bc_a_ptr = reinterpret_cast<DType*>(input_a.dptr_);
+        }
+        if (b_shape_changed) {
+          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
+            s, bc_size_b, input_b.dptr<IType>(), bc_b_ptr,
+            k_b_shape, k_b_shape_bc, OpReqType::kWriteTo, ndim, axes_b, out_stride_b, idx_b);
+        } else {
+          bc_b_ptr = reinterpret_cast<DType*>(input_b.dptr_);
+        }
       });
     });
     ans = mshadow::Tensor<xpu, 3, DType>(output.dptr<DType>(),

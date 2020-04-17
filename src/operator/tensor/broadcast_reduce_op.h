@@ -1059,9 +1059,9 @@ struct broadcast_kernel {
                                   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape,
                                   const OpReqType req,
                                   const uint32_t ndim,
-                                  const uint64_t *axes,
-                                  const uint64_t *out_stride,
-                                  const size_t no_axes) {
+                                  const size_t *axes,
+                                  const size_t *out_stride,
+                                  const size_t num_broadcast_axes) {
         index_t idx = i;
         index_t init_off = 0;
         for (int iter = ndim - 1; idx > 0 && iter >= 0; --iter) {
@@ -1070,7 +1070,7 @@ struct broadcast_kernel {
           idx /= in_shape[iter];
         }
         index_t stride_0, stride_1, stride_2;
-        switch (no_axes) {
+        switch (num_broadcast_axes) {
           case 1 :
             stride_0 = out_stride[axes[0]];
             for (int l=0; l < out_shape[axes[0]]; l++) {
@@ -1132,22 +1132,25 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
           out_shape[i] = 1;
         }
       }
-      uint64_t axes[dst_shape.ndim()], out_stride[dst_shape.ndim()];
+      size_t axes[dst_shape.ndim()], out_stride[dst_shape.ndim()];
       int iter = dst_shape.ndim() - 1, i = 0;
+      bool shape_changed = false;
       out_stride[iter] = 1;
       if (in_shape[iter] != dst_shape[iter]) {
-        axes[i] = iter;
-        i++;
+        axes[i++] = iter;
+        shape_changed = true;
       }
       --iter;
       for (; iter >= 0; --iter) {
         if (in_shape[iter] != dst_shape[iter]) {
-          axes[i] = iter;
-          i++;
+          axes[i++] = iter;
+          shape_changed = true;
         }
         out_stride[iter] = out_stride[iter+1] * dst_shape[iter+1];
       }
-      if (dst_shape.ndim() == 2) {
+      if (!shape_changed) {
+        mxnet_op::copy(ctx.get_stream<xpu>(), outputs[0], inputs[0]);
+      } else if (dst_shape.ndim() == 2) {
         Tensor<xpu, 2, OType> out =
           outputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
         Tensor<xpu, 2, IType> data =
