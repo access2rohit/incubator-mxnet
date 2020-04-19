@@ -158,8 +158,8 @@ inline void MatmulImpl(const OpContext& ctx,
     MSHADOW_TYPE_SWITCH_WITH_BOOL(input_a.type_flag_, IType, {
       MSHADOW_TYPE_SWITCH_WITH_BOOL(input_b.type_flag_, OType, {
         bool a_shape_changed = false, b_shape_changed = false;
-        size_t axes[ndim-2], out_stride[ndim-2], axes_b[ndim-2], out_stride_b[ndim-2];
-        int iter = ndim - 3, idx_a = 0, idx_b = 0;
+        size_t axes[ndim], out_stride[ndim], axes_b[ndim], out_stride_b[ndim];
+        int iter = ndim - 1, idx_a = 0, idx_b = 0;
         out_stride[iter] = 1;
         out_stride_b[iter] = 1;
         if (k_a_shape[iter] != k_a_shape_bc[iter]) {
@@ -187,16 +187,16 @@ inline void MatmulImpl(const OpContext& ctx,
             idx_b++;
           }
         }
-        if(a_shape_changed){
+        if (a_shape_changed) {
           Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-            s, bc_size_a, input_a.dptr<IType>(), bc_a_ptr,
+            s, a_shape.Size(), input_a.dptr<IType>(), bc_a_ptr,
             k_a_shape, k_a_shape_bc, OpReqType::kWriteTo, ndim, axes, out_stride, idx_a);
         } else {
           bc_a_ptr = reinterpret_cast<DType*>(input_a.dptr_);
         }
         if (b_shape_changed) {
           Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-            s, bc_size_b, input_b.dptr<IType>(), bc_b_ptr,
+            s, b_shape.Size(), input_b.dptr<IType>(), bc_b_ptr,
             k_b_shape, k_b_shape_bc, OpReqType::kWriteTo, ndim, axes_b, out_stride_b, idx_b);
         } else {
           bc_b_ptr = reinterpret_cast<DType*>(input_b.dptr_);
