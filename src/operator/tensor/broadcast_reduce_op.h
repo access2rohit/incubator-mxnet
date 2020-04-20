@@ -1049,6 +1049,13 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
   ReduceAxesBackwardUseInOutImpl<xpu, OP, normalize>(ctx, small, inputs, req, outputs);
 }
 
+/**
+ * Changed the thread workload mapping from 1
+ * thread/output element to 1 thread/input to be broadcasted
+ * This approach leverages vectorization when fastest varying
+ * index(stride=1) of the tensor is to be broadcasted.
+ * In other cases it simply performs better by better load balancing.
+ */
 template<typename OP>
 struct broadcast_kernel {
   template<typename IType, typename OType>
@@ -1070,7 +1077,12 @@ struct broadcast_kernel {
           idx /= in_shape[iter];
         }
         index_t stride_0, stride_1, stride_2;
+        // Each case is based on the number of axis to be broadcasted
+        // (1, 2 or 3) after merging axes.
         switch (num_broadcast_axes) {
+          // when input shape is amogst one of the form
+          // [(x,1), (x,1,x), (1,x)]
+          // x can be any +ve number >=0 and they need not be equal to each other
           case 1 :
             stride_0 = out_stride[axes[0]];
             for (int l=0; l < out_shape[axes[0]]; l++) {
@@ -1078,7 +1090,9 @@ struct broadcast_kernel {
                   req, OP::Map(input[i]));
             }
             break;
-
+          // when input shape is amogst one of the form
+          // [(x,1,x,1), (1,x,1,x), (x,1,x,1,x)]
+          // x can be any +ve number >1 or =0(the axis ) and they need not be equal to each other
           case 2:
             stride_1 = out_stride[axes[1]], stride_0 = out_stride[axes[0]];
             for (int k=0; k < out_shape[axes[1]]; k++) {
@@ -1088,7 +1102,8 @@ struct broadcast_kernel {
               }
             }
             break;
-
+          // when input shape is of the form [(1,x,1,x,1)] and
+          // x can be any +ve number >=0 and they need not be equal to each other
           case 3:
             stride_2 = out_stride[axes[2]], stride_1 = out_stride[axes[1]];
             stride_0 = out_stride[axes[0]];
@@ -1116,6 +1131,10 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   using namespace mxnet_op;
   mxnet::TShape src_shape, dst_shape;
+  // combines 2 or more consecutive broadcast/non-broadcast axes together
+  // e.g. (3,4,1,1,5,1,6,7) (2,3,5) (5,10,9) -> (12,1,5,1,42) (1,3) (50, 9)
+  //      and this is the new input for broadcast_kernel whose total
+  //      num of dimensions cannot be greater than 5(throws an error otherwise).
   BroadcastReduceShapeCompact(outputs[0].shape_, small, &dst_shape, &src_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, IType, {
@@ -1131,6 +1150,9 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
           out_shape[i] = 1;
         }
       }
+      // axes: stores which axes in input is to broadcasted
+      // stride: stores offset corresponding to an index of output tensor.
+      //         It is calculated using shape of the output tensor.
       size_t axes[dst_shape.ndim()], out_stride[dst_shape.ndim()];
       int iter = dst_shape.ndim() - 1, i = 0;
       bool shape_changed = false;
@@ -1148,6 +1170,8 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
         out_stride[iter] = out_stride[iter+1] * dst_shape[iter+1];
       }
       if (!shape_changed) {
+        // If no broadcast is required (i.e. input_shape == output_shape)
+        // then simply copy input to outout.
         mxnet_op::copy(ctx.get_stream<xpu>(), outputs[0], inputs[0]);
       } else if (dst_shape.ndim() == 2) {
         Tensor<xpu, 2, OType> out =
