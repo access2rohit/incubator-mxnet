@@ -137,7 +137,7 @@ endif
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++14 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
-	NVCCFLAGS += -std=c++14 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS += -std=c++14 -Xcompiler -D_FORCE_INLINES -lineinfo -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
 # CFLAGS for segfault logger
