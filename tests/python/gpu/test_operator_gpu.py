@@ -42,7 +42,7 @@ from test_exc_handling import *
 #from test_rnn import *
 from test_sparse_ndarray import *
 from test_sparse_operator import *
-from test_ndarray import *
+#from test_ndarray import *
 from test_subgraph_op import *
 from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
