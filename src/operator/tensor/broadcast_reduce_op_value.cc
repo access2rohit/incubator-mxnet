@@ -94,7 +94,11 @@ Example::
 .set_attr_parser(ParamParser<BroadcastAxesParam>)
 .add_arguments(BroadcastAxesParam::__FIELDS__())
 .set_attr<mxnet::FInferShape>("FInferShape", BroadcastAxesShape)
-.set_attr<FCompute>("FCompute<cpu>", BroadcastAxisComputeCPU);
+.set_attr<FCompute>("FCompute<cpu>", BroadcastAxisComputeCPU)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+});
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
 .describe(R"code(Broadcasts the input array to a new shape.

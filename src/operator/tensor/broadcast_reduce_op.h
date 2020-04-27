@@ -1066,23 +1066,22 @@ struct broadcast_kernel {
                                   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape,
                                   const OpReqType req,
                                   const uint32_t ndim,
-//                                  const tensor_utils *tu,
                                   const size_t *axes,
                                   const size_t *out_stride,
                                   const int num_broadcast_axes) {
         index_t idx = i;
-        printf("i=%d, red_axes=%d\n", i, num_broadcast_axes);
-        printf("axes[0]=%u", axes[0]);
+//        printf("i=%d, red_axes=%d\n", i, num_broadcast_axes);
+//        printf("axes[0]=%u", axes[0]);
         index_t init_off = 0;
         for (int iter = ndim - 1; idx > 0 && iter >= 0; --iter) {
-          printf("Thread %d: inside for loop, iter=%d\n", i, iter);
+//          printf("Thread %d: inside for loop, iter=%d\n", i, iter);
           size_t dim_idx = idx % in_shape[iter];
-          printf("Thread %d: in_shape[iter]=%d\n", i, in_shape[iter]);
+//          printf("Thread %d: in_shape[iter]=%d\n", i, in_shape[iter]);
           init_off += dim_idx * out_stride[iter];
-          printf("Thread %d: out_stride[iter]=%d\n", i, out_stride[iter]);
+//          printf("Thread %d: out_stride[iter]=%d\n", i, out_stride[iter]);
           idx /= in_shape[iter];
         }
-        printf("Thread %d: reached here 1\n", i);
+//        printf("Thread %d: reached here 1\n", i);
         index_t stride_0, stride_1, stride_2;
         // Each case is based on the number of axis to be broadcasted
         // (1, 2 or 3) after merging axes.
@@ -1091,7 +1090,7 @@ struct broadcast_kernel {
           // [(x,1), (x,1,x), (1,x)]     ->   (10, 1) -> (10,100)
           // x can be any +ve number >=0 and they need not be equal to each other
           case 1 :
-            printf("Thread %d: axes[0]=%u, stride_0=%u\n", i, axes[0], out_stride[axes[0]]);
+//            printf("Thread %d: axes[0]=%u, stride_0=%u\n", i, axes[0], out_stride[axes[0]]);
             stride_0 = out_stride[axes[0]];
             for (int l=0; l < out_shape[axes[0]]; l++) {
               KERNEL_ASSIGN(output[init_off + l*stride_0],
@@ -1102,7 +1101,7 @@ struct broadcast_kernel {
           // [(x,1,x,1), (1,x,1,x), (x,1,x,1,x)]
           // x can be any +ve number >1 or =0(the axis ) and they need not be equal to each other
           case 2:
-            printf("Thread %d: reached here 2\n", i);
+//            printf("Thread %d: reached here 2\n", i);
             stride_1 = out_stride[axes[1]], stride_0 = out_stride[axes[0]];
             for (int k=0; k < out_shape[axes[1]]; k++) {
               for (int l=0; l < out_shape[axes[0]]; l++) {
@@ -1114,7 +1113,7 @@ struct broadcast_kernel {
           // when input shape is of the form [(1,x,1,x,1)] and
           // x can be any +ve number >=0 and they need not be equal to each other
           case 3:
-            printf("Thread %d: reached here 3\n", i);
+//            printf("Thread %d: reached here 3\n", i);
             stride_2 = out_stride[axes[2]], stride_1 = out_stride[axes[1]];
             stride_0 = out_stride[axes[0]];
             for (int j=0; j < out_shape[axes[2]]; j++) {
@@ -1128,6 +1127,36 @@ struct broadcast_kernel {
             break;
         }
 
+  }
+};
+
+template<int req>
+struct compute_offset {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType *axes,
+                                  DType *out_stride,
+//                                  index_t *num_bc_axes,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> dst_shape,
+                                  const index_t ndim) {
+    int iter = ndim - 1, num_bc_axes = 0;
+//    printf("assigning out_stride\n");
+    out_stride[iter] = 1;
+    if (in_shape[iter] != dst_shape[iter]) {
+      axes[num_bc_axes++] = iter;
+//      printf("axes assigned too\n");
+    }
+    --iter;
+//    printf("calculating out_stride 2\n");
+    for (; iter >= 0; --iter) {
+      if (in_shape[iter] != dst_shape[iter]) {
+        axes[num_bc_axes++] = iter;
+
+      }
+      out_stride[iter] = out_stride[iter+1] * dst_shape[iter+1];
+    }
+//    printf("num_bc_axes=%d\n", num_bc_axes);
   }
 };
 
@@ -1148,21 +1177,27 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
   //      num of dimensions cannot be greater than 5(throws an error otherwise).
   BroadcastReduceShapeCompact(outputs[0].shape_, small, &dst_shape, &src_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  LOG(INFO) << "before creating workspace";
   MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, IType, {
     MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, OType, {
+//      LOG(INFO) << "before creating workspace";
       mshadow::Tensor<xpu, 1, char> workspace =
-          ctx.requested[0].get_space_typed<xpu, 1, char>(mshadow::Shape1(sizeof(size_t) * dst_shape.ndim() * 2), s);
+          ctx.requested.at(0).get_space_typed<xpu, 1, char>
+          (mshadow::Shape1(sizeof(size_t) * dst_shape.ndim() * 2), s);
       char* workspace_curr_ptr = workspace.dptr_;
       size_t* out_stride = reinterpret_cast<size_t*>(workspace_curr_ptr);
-      size_t* axes = reinterpret_cast<size_t*>(workspace_curr_ptr + sizeof(size_t) * dst_shape.ndim());
-      LOG(INFO) << "workspace created !";
+      size_t* axes =
+          reinterpret_cast<size_t*>(workspace_curr_ptr + sizeof(size_t) * dst_shape.ndim());
+      index_t num_bc_axes = 0;
+//      LOG(INFO) << "workspace created !";
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape;
       for (int i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
         if (i < dst_shape.ndim()) {
           in_shape[i] = src_shape[i];
           out_shape[i] = dst_shape[i];
+          if (in_shape[i] != out_shape[i]){
+            num_bc_axes++;
+          }
         } else {
           in_shape[i] = 1;
           out_shape[i] = 1;
@@ -1171,24 +1206,10 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
       // axes: stores which axes in input is to broadcasted
       // out_stride: stores offset corresponding to an index of output tensor.
       //             It is calculated using shape of the output tensor.
-      LOG(INFO) << "calculating out_stride";
-      int iter = dst_shape.ndim() - 1, i = 0;
-      bool shape_changed = false;
-      out_stride[iter] = 1;
-      if (in_shape[iter] != dst_shape[iter]) {
-        axes[i++] = iter;
-        shape_changed = true;
-      }
-      --iter;
-      LOG(INFO) << "calculating out_stride";
-      for (; iter >= 0; --iter) {
-        if (in_shape[iter] != dst_shape[iter]) {
-          axes[i++] = iter;
-          shape_changed = true;
-        }
-        out_stride[iter] = out_stride[iter+1] * dst_shape[iter+1];
-      }
-      if (!shape_changed) {
+//      LOG(INFO) << "calculating out_stride 1";
+      Kernel<compute_offset<1>, xpu>::Launch(s, 1, axes, out_stride, in_shape, out_shape, dst_shape.ndim());
+//      LOG(INFO) << "num_bc_axes=" << num_bc_axes;
+      if (num_bc_axes == 0) {
         // If no broadcast is required (i.e. input_shape == output_shape)
         // then simply copy input to outout.
         mxnet_op::copy(ctx.get_stream<xpu>(), outputs[0], inputs[0]);
@@ -1199,7 +1220,6 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
           inputs[0].get_with_shape<xpu, 2, IType>(src_shape.get<2>(), s);
         Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
           s, data.shape_.Size(), data.dptr_, out.dptr_, in_shape,
-//          out_shape, req[0], 2, &tu, 1);
           out_shape, req[0], 2, axes, out_stride, 1);
       } else {
         const int ndim = MXNET_SPECIAL_MAX_NDIM;
@@ -1209,8 +1229,7 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
           inputs[0].get_with_shape<xpu, ndim, IType>(src_shape.get<ndim>(), s);
         Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
           s, data.shape_.Size(), data.dptr_, out.dptr_, in_shape,
-//          out_shape, req[0], ndim, &tu, i);
-          out_shape, req[0], ndim, axes, out_stride, i);
+          out_shape, req[0], ndim, axes, out_stride, num_bc_axes);
       }
     });
   });
