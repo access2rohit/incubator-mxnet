@@ -2861,7 +2861,7 @@ def test_reduce():
 
 @with_seed()
 def test_broadcast():
-    sample_num = 200
+    sample_num = 1
     for i in range(sample_num):
         # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
         ndim = np.random.randint(1, 6)
@@ -2871,6 +2871,7 @@ def test_broadcast():
         size = tuple([shape[ele] for ele in axis])
         for ele in axis:
             shape[ele] = 1
+        print("i={}, shape={}".format(i, shape))
         target_shape_with_zero = list(target_shape)
         for idx in range(len(target_shape_with_zero)):
             if idx not in axis:
@@ -2878,10 +2879,10 @@ def test_broadcast():
                 break
 
         a = mx.symbol.Variable('a')
-        sym_bcast_axis = mx.symbol.broadcast_axis(a, axis=axis, size=size)
-        sym_bcast_to = mx.symbol.broadcast_to(a, shape=tuple(target_shape))
-        sym_bcast_to_with_zero = mx.symbol.broadcast_to(a, shape=tuple(target_shape_with_zero))
-        sym_bcast_like = mx.symbol.broadcast_like(a, sym_bcast_to)
+        sym_bcast_axis = mx.symbol.test(a, axis=axis, size=size)
+        #sym_bcast_to = mx.symbol.broadcast_to(a, shape=tuple(target_shape))
+        #sym_bcast_to_with_zero = mx.symbol.broadcast_to(a, shape=tuple(target_shape_with_zero))
+        #sym_bcast_like = mx.symbol.broadcast_like(a, sym_bcast_to)
 
         def test_broadcasting_ele(sym_bcast):
             dat_npy = np.random.rand(*shape)
@@ -2898,10 +2899,10 @@ def test_broadcast():
             net.backward(out_grads=mx.nd.array(outgrad_npy))
             assert_almost_equal(grad_nd, grad_groundtruth, rtol=1e-4)
         test_broadcasting_ele(sym_bcast_axis)
-        test_broadcasting_ele(sym_bcast_to)
-        test_broadcasting_ele(sym_bcast_to_with_zero)
-        test_broadcasting_ele(sym_bcast_like)
-
+        #test_broadcasting_ele(sym_bcast_to)
+        #test_broadcasting_ele(sym_bcast_to_with_zero)
+        #test_broadcasting_ele(sym_bcast_like)
+    print("finished!");
 
 @with_seed()
 def test_transpose():
