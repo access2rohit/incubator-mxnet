@@ -2811,6 +2811,7 @@ def test_negation():
 ])
 @pytest.mark.parametrize('ndim', [2, 3, 4])
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int8', 'uint8', 'int32', 'int64', 'bool'])
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18166')
 def test_np_mixedType_unary_funcs(func, ref_grad, low, high, ndim, dtype):
     class TestMixedUnary(HybridBlock):
         def __init__(self, func):
