@@ -71,7 +71,7 @@
 using namespace mshadow;
 
 // Will cause clash with MKL fortran layer headers
-#if MSHADOW_USE_MKL == 0
+#if (MSHADOW_USE_MKL == 0 && MXNET_USE_EIGEN == 0)
 
 extern "C" {
 
@@ -228,11 +228,22 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
 }
 
 
-#if (MSHADOW_USE_MKL && MXNET_USE_LAPACK)
+//#if (MSHADOW_USE_MKL && MXNET_USE_LAPACK)
+#if (MXNET_USE_LAPACK && (MXNET_USE_MKL || MXNET_USE_EIGEN))
 
   // We interface with the C-interface of MKL
   // as this is the preferred way.
-  #include <mkl_lapacke.h>
+  #if (MXNET_USE_MKL)
+    // We interface with the C-interface of MKL
+    // as this is the preferred way.
+    #include <mkl_lapacke.h>
+  #else
+    // Using Eigen lapacke interface
+    #define lapack_complex_float float _Complex
+    #define lapack_complex_double double _Complex
+    #include <lapacke.h>
+  #endif
+  //#include <mkl_lapacke.h>
 
   #define MXNET_LAPACK_ROW_MAJOR LAPACK_ROW_MAJOR
   #define MXNET_LAPACK_COL_MAJOR LAPACK_COL_MAJOR

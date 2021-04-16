@@ -160,6 +160,17 @@ void strided_batch_sgemm(bool transA, bool transB,
   cblas_sgemm_batch(CblasColMajor, p_transa, p_transb,
                     p_m, p_n, p_k, p_alpha, pp_A.data(), p_lda, pp_B.data(),
                     p_ldb, p_beta, pp_C.data(), p_ldc, GROUP_SIZE, p_group_sizeb);
+#elif MXNET_USE_EIGEN == 1
+  const char* CblasTrans = "t";
+  const char* CblasNoTrans = "n";
+  for (int i = 0; i < batchCount; ++i) {
+    sgemm_(
+                transA ? CblasTrans : CblasNoTrans,
+                transB ? CblasTrans : CblasNoTrans,
+                &m, &n, &k,
+                &alpha, pp_A[i], &lda,
+                pp_B[i], &ldb, &beta, pp_C[i], &ldc);
+  }
 #else
   for (int i = 0; i < batchCount; ++i) {
     cblas_sgemm(CblasColMajor,

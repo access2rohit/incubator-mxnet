@@ -176,7 +176,11 @@ typedef unsigned __int64 uint64_t;
   #define MSHADOW_USE_SSE 0
 #endif
 
-#if MSHADOW_USE_CBLAS
+#if MXNET_USE_EIGEN
+extern "C" {
+    #include <blas.h>
+}
+#elif MSHADOW_USE_CBLAS
 extern "C" {
     #include <cblas.h>
 }
